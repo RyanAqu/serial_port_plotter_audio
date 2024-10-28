@@ -3,7 +3,7 @@
 # Project created by QtCreator 2014-12-22T14:53:33
 #
 #-------------------------------------------------
-
+QT       += multimedia
 QT       += core gui
 QT       += serialport
 CONFIG += c++11

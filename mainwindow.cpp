@@ -75,6 +75,16 @@ MainWindow::MainWindow (QWidget *parent) :
 {
   ui->setupUi (this);
 
+  // user code
+  // 设置基础文件名
+  baseFileName = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss_") + "data_";
+  // 设置数据目录并确保它存在
+  dataDirectory = QCoreApplication::applicationDirPath() + "/data";
+  QDir dir;
+  if (!dir.exists(dataDirectory)) {
+      dir.mkpath(dataDirectory);
+  }
+
   /* Init UI and populate UI controls */
   createUI();
 
@@ -105,7 +115,9 @@ MainWindow::MainWindow (QWidget *parent) :
 MainWindow::~MainWindow()
 {
     closeCsvFile();
-      
+    //user code
+    closeTxtFile();  // 关闭并释放TXT文件资源
+    //
     if (serialPort != nullptr)
       {
         delete serialPort;
@@ -501,6 +513,9 @@ void MainWindow::readData()
                             ui->textEdit_UartWindow->append(receivedData);
                         }
                         emit newData(incomingData);                                       // Emit signal for data received with the list
+                        //user code
+                        saveDataToTxt(receivedData);
+                        //
                         break;
                     }
                     else if (isdigit (temp[i]) || isspace (temp[i]) || temp[i] =='-' || temp[i] =='.')
@@ -788,6 +803,8 @@ void MainWindow::on_actionDisconnect_triggered()
 
       ui->savePNGButton->setEnabled (false);
       enable_com_controls (true);
+
+
     }
 }
 /** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -898,6 +915,52 @@ void MainWindow::on_pushButton_ResetVisible_clicked()
         ui->plot->graph(i)->setVisible(true);
         ui->listWidget_Channels->item(i)->setBackground(Qt::NoBrush);
     }
+    //user code
+    // 打开文件对话框以选择 txt 文件
+    QString dataDir = QDir::current().absoluteFilePath("data");
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Data File"), dataDir, tr("Text Files (*.txt)"));
+
+    if (!fileName.isEmpty()) {
+        // 读取选中的 txt 文件中的数据
+        QFile file(fileName);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QByteArray audioData;
+            while (!file.atEnd()) {
+                QByteArray line = file.readLine();
+                bool ok;
+                int value = line.trimmed().toInt(&ok);
+                if (ok) {
+                    audioData.append(static_cast<char>(value));
+                }
+            }
+            file.close();
+
+            // 创建音频输出
+            QAudioFormat format;
+            format.setSampleRate(3200);
+            format.setChannelCount(1);
+            format.setSampleSize(8);
+            format.setCodec("audio/pcm");
+            format.setByteOrder(QAudioFormat::LittleEndian);
+            format.setSampleType(QAudioFormat::UnSignedInt);
+
+            QBuffer* audioBuffer = new QBuffer(this);
+            audioBuffer->setData(audioData);
+            audioBuffer->open(QIODevice::ReadOnly);
+
+            QAudioOutput* audioOutput = new QAudioOutput(format, this);
+            connect(audioOutput, &QAudioOutput::stateChanged, this, [audioBuffer, audioOutput](QAudio::State state) {
+                if (state == QAudio::StoppedState) {
+                    audioBuffer->close();
+                    audioBuffer->deleteLater();
+                    audioOutput->deleteLater();
+                }
+            });
+
+            audioOutput->start(audioBuffer);
+        }
+    }
+    //
 }
 
 void MainWindow::on_listWidget_Channels_itemDoubleClicked(QListWidgetItem *item)
@@ -924,5 +987,46 @@ void MainWindow::on_pushButton_clicked()
     for (QSerialPortInfo port : QSerialPortInfo::availablePorts())
     {
         ui->comboPort->addItem (port.portName());
+    }
+}
+
+//user code
+void MainWindow::openTxtFile()
+{
+    if (txtFile != nullptr) {
+        delete txtFile;
+    }
+    QString fileName = dataDirectory + "/" + baseFileName + QString::number(dataCounter / maxDataCount) + ".txt";
+    txtFile = new QFile(fileName);
+    if (!txtFile->open(QIODevice::WriteOnly | QIODevice::Text)) {
+        delete txtFile;
+        txtFile = nullptr;
+    }
+}
+
+void MainWindow::closeTxtFile()
+{
+    if (txtFile != nullptr) {
+        txtFile->close();
+        delete txtFile;
+        txtFile = nullptr;
+    }
+}
+
+void MainWindow::saveDataToTxt(const QString &data)
+{
+    if (txtFile == nullptr || !txtFile->isOpen()) {
+        openTxtFile();
+    }
+
+    if (txtFile != nullptr) {
+        QTextStream out(txtFile);
+        out << data << "\n";
+        dataCounter++;
+
+        // Check if current file has reached the maximum data count
+        if (dataCounter % maxDataCount == 0) {
+            closeTxtFile();
+        }
     }
 }

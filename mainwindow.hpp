@@ -33,6 +33,10 @@
 #include "helpwindow.hpp"
 #include "qcustomplot/qcustomplot.h"
 
+//user code
+#include <QAudioOutput>
+//
+
 #define START_MSG       '$'
 #define END_MSG         ';'
 
@@ -145,6 +149,20 @@ private:
     void setupPlot();                                                                     // Setup the QCustomPlot
                                                                                           // Open the inside serial port with these parameters
     void openPort(QSerialPortInfo portInfo, int baudRate, QSerialPort::DataBits dataBits, QSerialPort::Parity parity, QSerialPort::StopBits stopBits);
+
+    //user code
+    //mainwindow.hpp(row=36)
+    //mainwindow.cpp(row=78,row=118,row=516,row=918,row=993)
+    //SerialPortPlotter.pro(row=6)
+    int dataCounter = 0;             // 用于计数接收到的数据
+    QFile *txtFile = nullptr;        // 用于管理TXT文件
+    QString baseFileName;            // 基础文件名，用于生成多个TXT文件
+    const int maxDataCount = 32000;  // 每个TXT文件的最大数据量
+    QString dataDirectory;           // 用于存储数据文件的目录
+    void openTxtFile();
+    void closeTxtFile();
+    void saveDataToTxt(const QString &data);
+
 };
 
 

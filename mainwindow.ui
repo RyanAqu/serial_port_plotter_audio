@@ -524,7 +524,7 @@
            <item>
             <widget class="QPushButton" name="pushButton_ResetVisible">
              <property name="text">
-              <string>Reset All Visible</string>
+              <string>Audio(Reset All Visible)</string>
              </property>
             </widget>
            </item>
