@@ -1,5 +1,5 @@
 # **串口示波器简易实施**
-项目来源：CieNTi / serial_port_plotter
+项目参考：CieNTi / serial_port_plotter
 
 开发环境：qt5.12.1+安装选择组件MinGW 7.3.0 64-bit（qt和tools均勾选）；打包工具为qt5.12.1（MinGW 7.3.0 64-bit）；
 
